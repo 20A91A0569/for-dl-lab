@@ -1,1 +1,118 @@
-#
+#1st program
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import layers, models
+from tensorflow.keras.datasets import mnist
+
+# Load and preprocess the data
+(train_images, train_labels), (test_images, test_labels) = mnist.load_data()
+train_images, test_images = train_images / 255.0, test_images / 255.0
+train_labels = tf.keras.utils.to_categorical(train_labels, 10)
+test_labels = tf.keras.utils.to_categorical(test_labels, 10)
+
+# Build the CNN model
+model = models.Sequential()
+model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Flatten())
+model.add(layers.Dense(64, activation='relu'))
+model.add(layers.Dense(10, activation='softmax'))
+
+model.compile(optimizer='adam',
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+
+# Train the model on the training data
+model.fit(train_images.reshape(-1, 28, 28, 1), train_labels, epochs=5, batch_size=64)
+
+# Evaluate the model on the test data
+test_loss, test_accuracy = model.evaluate(test_images.reshape(-1, 28, 28, 1), test_labels)
+print("Test accuracy:", test_accuracy)
+
+
+#2nd program
+from tensorflow.keras.models import load_model
+from PIL import Image
+import numpy as np
+
+image_height = 128
+image_width = 128
+num_channels = 3
+
+
+model = load_model('trained_model_NEW_2_2_Dataset.h5')
+
+new_face_path = '/content/hjhhh.jpg'
+new_face = Image.open(new_face_path)
+
+display(new_face)
+new_face = new_face.resize((image_width, image_height))
+new_face = np.array(new_face)
+new_face = np.expand_dims(new_face, axis=0)
+predictions = model.predict(new_face)
+predicted_age_group = np.argmax(predictions)
+print("predictions are ",predictions)
+print("Predicted Age Group:", predicted_age_group)
+age_mapping = {0: 'YOUNG', 1: 'MIDDLE', 2: 'OLD'}
+predicted_age_group_label = age_mapping[predicted_age_group]
+
+print("Predicted Age Group:", predicted_age_group_label)
+
+
+#3rd program
+import tensorflow as tf
+from tensorflow.keras import layers, models
+from tensorflow.keras.datasets import cifar10
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.callbacks import LearningRateScheduler
+
+# Load and preprocess the CIFAR-10 dataset
+(train_images, train_labels), (test_images, test_labels) = cifar10.load_data()
+train_images, test_images = train_images / 255.0, test_images / 255.0
+
+# Split data into training and validation sets
+train_images, val_images, train_labels, val_labels = train_test_split(train_images, train_labels, test_size=0.1, random_state=42)
+
+# Define a CNN architecture
+model = models.Sequential()
+model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Conv2D(128, (3, 3), activation='relu'))
+model.add(layers.Flatten())
+model.add(layers.Dense(64, activation='relu'))
+model.add(layers.Dense(10, activation='softmax'))
+
+# Define a learning rate schedule
+def lr_schedule(epoch):
+    initial_lr = 0.001
+    if epoch >= 40:
+        return initial_lr * 0.1
+    return initial_lr
+
+# Compile the model
+model.compile(optimizer='adam',
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
+
+# Create data augmentation generator
+datagen = ImageDataGenerator(rotation_range=15,
+                             width_shift_range=0.1,
+                             height_shift_range=0.1,
+                             horizontal_flip=True,
+                             fill_mode='nearest')
+
+# Train the model with data augmentation and learning rate schedule
+history = model.fit(datagen.flow(train_images, train_labels, batch_size=64),
+                    epochs=50,
+                    steps_per_epoch=len(train_images) // 64,
+                    validation_data=(val_images, val_labels),
+                    callbacks=[LearningRateScheduler(lr_schedule)])
+
+# Evaluate the model on the test set
+test_loss, test_acc = model.evaluate(test_images, test_labels)
+print('Test accuracy:', test_acc)
